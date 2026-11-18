@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>VISION 專家時段</title>
+<style>
+:root{
+  --bg:#f7f7f5;--card:#fff;--ink:#1f1f1d;--muted:#6b6a65;--line:#e4e2dc;
+  --sel:#1d6fd6;--sel-soft:#d6e6fb;--held:#f0b44c;--held-soft:#fdf0d8;--busy:#b9b7b0;--busy-soft:#ecebe7;
+}
+@media (prefers-color-scheme: dark){
+  :root{--bg:#191917;--card:#22221f;--ink:#ecebe6;--muted:#a3a19a;--line:#36352f;
+  --sel:#4a92ec;--sel-soft:#1f3a5c;--held:#e0a43c;--held-soft:#4a3a1c;--busy:#6d6b64;--busy-soft:#2e2d29;}
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 -apple-system,BlinkMacSystemFont,"PingFang TC","Noto Sans TC","Microsoft JhengHei",sans-serif}
+.wrap{max-width:980px;margin:0 auto;padding:20px 16px 48px}
+h1{font-size:22px;font-weight:600;margin:0 0 4px}
+.sub{color:var(--muted);margin:0 0 18px;font-size:14px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+select,button{font:inherit;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer}
+button:hover{border-color:var(--muted)}
+button.primary{background:var(--sel);border-color:var(--sel);color:#fff;font-weight:600}
+button.primary:disabled{opacity:.5;cursor:default}
+.week{font-weight:600;min-width:150px;text-align:center}
+.spacer{flex:1}
+.legend{display:flex;gap:14px;font-size:13px;color:var(--muted);margin-bottom:10px;flex-wrap:wrap}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{width:14px;height:14px;border-radius:3px;display:inline-block;border:1px solid var(--line)}
+.layout{display:grid;grid-template-columns:1fr 260px;gap:16px;align-items:start}
+@media (max-width:760px){.layout{grid-template-columns:1fr}}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px}
+.gridwrap{overflow-x:auto;padding:10px}
+.grid{display:grid;grid-template-columns:52px repeat(7,minmax(54px,1fr));user-select:none;-webkit-user-select:none;touch-action:none;min-width:460px}
+.hd{font-size:13px;text-align:center;padding:4px 0 8px;color:var(--muted)}
+.hd b{display:block;color:var(--ink);font-size:14px}
+.hd.today b{color:var(--sel)}
+.tm{font-size:11px;color:var(--muted);text-align:right;padding-right:8px;transform:translateY(-7px);height:22px}
+.c{height:22px;border-left:1px solid var(--line);border-top:1px solid var(--line);cursor:crosshair}
+.c.hour{border-top-color:var(--muted);border-top-style:solid;opacity:1}
+.c.half{border-top-style:dashed}
+.c.lastcol{border-right:1px solid var(--line)}
+.c.lastrow{border-bottom:1px solid var(--line)}
+.c.on{background:var(--sel)}
+.c.preview-add{background:var(--sel-soft)}
+.c.preview-del{background:var(--sel-soft);opacity:.6}
+.c.held{background:repeating-linear-gradient(45deg,var(--held-soft) 0 5px,var(--held) 5px 7px);cursor:not-allowed}
+.c.busy{background:repeating-linear-gradient(45deg,var(--busy-soft) 0 5px,var(--busy) 5px 7px);cursor:not-allowed}
+.c.past{background:var(--busy-soft);cursor:not-allowed}
+.side{padding:14px 16px}
+.side h2{font-size:15px;margin:0 0 8px}
+.side ul{list-style:none;margin:0 0 12px;padding:0;font-size:14px;max-height:340px;overflow:auto}
+.side li{padding:5px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px}
+.side li:last-child{border-bottom:none}
+.empty{color:var(--muted);font-size:14px;margin:0 0 12px}
+.tools{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.tools button{font-size:13px;padding:5px 10px}
+.msg{font-size:13px;margin-top:8px;min-height:20px}
+.msg.ok{color:#1f8a5b}.msg.err{color:#c0392b}
+.hint{font-size:13px;color:var(--muted);margin-top:10px}
+.hidden{display:none}
+.panel{max-width:560px;margin:40px auto;padding:24px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.panel h1{margin-bottom:12px}
+.panel .row{margin:4px 0}
+.btns{display:flex;gap:10px;margin-top:18px}
+</style>
+</head>
+<body>
+
+<div class="panel" id="loadingView"><p>載入中…</p></div>
+
+<div class="panel hidden" id="msgView"><h1 id="msgTitle"></h1><p id="msgText"></p></div>
+
+<div class="panel hidden" id="replyView">
+  <h1>VISION 專家會議時段確認</h1>
+  <p id="rpHello"></p>
+  <p class="row">題目：<span id="rpTitle"></span></p>
+  <p class="row">案號：<span id="rpCode"></span></p>
+  <p class="row">時間：<b id="rpWhen"></b></p>
+  <div class="btns">
+    <button class="primary" id="rpOk">確認出席</button>
+    <button id="rpNo">婉拒</button>
+  </div>
+  <div class="msg" id="rpMsg"></div>
+</div>
+<div class="wrap hidden" id="gridView">
+  <h1>專家可約時段</h1>
+  <p class="sub">在格子上按住拖曳，框選你可以的時間；再拖一次已選的格子就是取消。斜線格是已被保留或已確認的場次，不能更改。</p>
+
+  <div class="bar">
+    <span id="who" style="font-weight:600"></span>
+    <span class="spacer"></span>
+    <button id="prev" aria-label="上一週">‹ 上一週</button>
+    <span class="week" id="weekLabel"></span>
+    <button id="next" aria-label="下一週">下一週 ›</button>
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:var(--sel)"></i>我可以</span>
+    <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--held-soft) 0 3px,var(--held) 3px 5px)"></i>VISION 保留中，待你確認</span>
+    <span><i class="sw" style="background:repeating-linear-gradient(45deg,var(--busy-soft) 0 3px,var(--busy) 3px 5px)"></i>已確認場次</span>
+  </div>
+
+  <div class="layout">
+    <div class="card gridwrap"><div class="grid" id="grid"></div></div>
+    <div class="card side">
+      <h2>本週已選</h2>
+      <div id="summary"></div>
+      <div class="tools">
+        <button id="copyPrev">套用上週</button>
+        <button id="weekdayPm">平日下午全選</button>
+        <button id="clearWeek">清除本週</button>
+      </div>
+      <button class="primary" id="save" style="width:100%">送出時段</button>
+      <div class="msg" id="msg"></div>
+      <p class="hint">送出後，VISION 講師部門會看到你的空檔。要保留你的時段時，你會收到確認通知。</p>
+    </div>
+  </div>
+</div>
+
+<script>
+/* 換成你的 Apps Script 網頁應用程式網址（結尾是 /exec） */
+const API = 'https://script.google.com/macros/s/AKfycbyV_XNev1gTDAhj2vABQ1DNNcBkvAi3kR2P-cYumIw0ptkzFtbt7xdP9DdxgziyJPFY/exec';
+
+function show(id){['loadingView','msgView','replyView','gridView'].forEach(v=>document.getElementById(v).classList.toggle('hidden',v!==id))}
+function showMsg(t,txt){document.getElementById('msgTitle').textContent=t;document.getElementById('msgText').textContent=txt;show('msgView')}
+
+async function apiGet(params){
+  const r=await fetch(API+'?'+new URLSearchParams(params).toString());
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'讀取失敗');
+  return j.data;
+}
+async function apiPost(body){
+  const r=await fetch(API,{method:'POST',body:JSON.stringify(body)});
+  const j=await r.json();
+  if(!j.ok)throw new Error(j.error||'送出失敗');
+  return j;
+}
+
+const START_H=8, END_H=21, STEP=30;
+const ROWS=(END_H-START_H)*60/STEP;
+const DAYS=['一','二','三','四','五','六','日'];
+
+function pad(n){return String(n).padStart(2,'0')}
+function ymd(d){return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate())}
+function mondayOf(d){const x=new Date(d.getFullYear(),d.getMonth(),d.getDate());const w=(x.getDay()+6)%7;x.setDate(x.getDate()-w);return x}
+function addDays(d,n){const x=new Date(d);x.setDate(x.getDate()+n);return x}
+function rowTime(r){const m=START_H*60+r*STEP;return pad(Math.floor(m/60))+':'+pad(m%60)}
+function toMin(t){const [h,m]=t.split(':').map(Number);return h*60+m}
+
+let DATA=null, LOCKED=[];
+const sel=new Set();
+let weekStart=mondayOf(new Date());
+let drag=null;
+function initGrid(data){
+  DATA=data;LOCKED=data.locked||[];
+  (data.available||[]).forEach(x=>{for(let m=toMin(x.s);m<toMin(x.e);m+=STEP)sel.add(x.d+'|'+pad(Math.floor(m/60))+':'+pad(m%60))});
+  document.getElementById('who').textContent=data.name+' 您好';
+  document.title='專家可約時段｜'+data.name;
+  show('gridView');render();
+}
+
+function lockedAt(dateStr,r){
+  const m=START_H*60+r*STEP;
+  for(const L of LOCKED){if(L.d===dateStr&&m>=toMin(L.s)&&m<toMin(L.e))return L}
+  return null;
+}
+function isPast(day,r){
+  const m=START_H*60+r*STEP;
+  return new Date(day.getFullYear(),day.getMonth(),day.getDate(),Math.floor(m/60),m%60)<new Date();
+}
+function render(){
+  const g=document.getElementById('grid');
+  const end=addDays(weekStart,6);
+  document.getElementById('weekLabel').textContent=(weekStart.getMonth()+1)+'/'+weekStart.getDate()+' – '+(end.getMonth()+1)+'/'+end.getDate();
+  const todayStr=ymd(new Date());
+  let html='<div></div>';
+  for(let i=0;i<7;i++){const d=addDays(weekStart,i);html+='<div class="hd'+(ymd(d)===todayStr?' today':'')+'">週'+DAYS[i]+'<b>'+(d.getMonth()+1)+'/'+d.getDate()+'</b></div>'}
+  for(let r=0;r<ROWS;r++){
+    const t=rowTime(r);
+    html+='<div class="tm">'+(t.endsWith(':00')?t:'')+'</div>';
+    for(let i=0;i<7;i++){
+      const d=addDays(weekStart,i);const ds=ymd(d);const k=ds+'|'+t;
+      let cls='c '+(t.endsWith(':00')?'hour':'half');
+      if(i===6)cls+=' lastcol';
+      if(r===ROWS-1)cls+=' lastrow';
+      const L=lockedAt(ds,r);let title=ds+' '+t;
+      if(L){cls+=' '+L.t;title+='　'+L.label}
+      else if(isPast(d,r))cls+=' past';
+      else if(sel.has(k))cls+=' on';
+      html+='<div class="'+cls+'" data-k="'+k+'" data-c="'+i+'" data-r="'+r+'" title="'+title+'"></div>';
+    }
+  }
+  g.innerHTML=html;renderSummary();
+}
+function cellBlocked(el){return el.classList.contains('held')||el.classList.contains('busy')||el.classList.contains('past')}
+function rangeCells(a,b){
+  const c0=Math.min(a.c,b.c),c1=Math.max(a.c,b.c),r0=Math.min(a.r,b.r),r1=Math.max(a.r,b.r);const out=[];
+  document.querySelectorAll('#grid .c').forEach(el=>{const c=+el.dataset.c,r=+el.dataset.r;if(c>=c0&&c<=c1&&r>=r0&&r<=r1&&!cellBlocked(el))out.push(el)});
+  return out;
+}
+function paintPreview(){
+  if(!drag)return;
+  rangeCells(drag.a,drag.b).forEach(el=>{el.classList.remove('on');el.classList.add(drag.mode==='add'?'preview-add':'preview-del')});
+}
+const grid=document.getElementById('grid');
+grid.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.c');if(!el||cellBlocked(el))return;e.preventDefault();
+  drag={a:{c:+el.dataset.c,r:+el.dataset.r},b:{c:+el.dataset.c,r:+el.dataset.r},mode:sel.has(el.dataset.k)?'del':'add'};
+  try{grid.setPointerCapture(e.pointerId)}catch(_){}
+  paintPreview();
+});
+grid.addEventListener('pointermove',e=>{
+  if(!drag)return;
+  const el=document.elementFromPoint(e.clientX,e.clientY);
+  if(!el||!el.classList||!el.classList.contains('c'))return;
+  const nb={c:+el.dataset.c,r:+el.dataset.r};
+  if(nb.c!==drag.b.c||nb.r!==drag.b.r){drag.b=nb;render();paintPreview()}
+});
+function endDrag(){
+  if(!drag)return;
+  rangeCells(drag.a,drag.b).forEach(el=>{drag.mode==='add'?sel.add(el.dataset.k):sel.delete(el.dataset.k)});
+  drag=null;setMsg('');render();
+}
+grid.addEventListener('pointerup',endDrag);grid.addEventListener('pointercancel',endDrag);window.addEventListener('pointerup',endDrag);
+
+function weekRanges(){
+  const out=[];
+  for(let i=0;i<7;i++){
+    const d=addDays(weekStart,i);const ds=ymd(d);let start=null;
+    for(let r=0;r<=ROWS;r++){
+      const on=r<ROWS&&sel.has(ds+'|'+rowTime(r));
+      if(on&&start===null)start=r;
+      if(!on&&start!==null){out.push({d,s:rowTime(start),e:rowTime(r)});start=null}
+    }
+  }
+  return out;
+}
+function allRanges(){
+  const keys=[...sel].sort();const out=[];let cur=null;
+  for(const k of keys){
+    const [ds,t]=k.split('|');const m=toMin(t);
+    if(cur&&cur.ds===ds&&cur.endMin===m)cur.endMin=m+STEP;
+    else{if(cur)out.push(cur);cur={ds,startMin:m,endMin:m+STEP}}
+  }
+  if(cur)out.push(cur);
+  const now=new Date();
+  return out.filter(x=>new Date(x.ds+'T'+pad(Math.floor(x.endMin/60))+':'+pad(x.endMin%60)+':00')>now)
+    .map(x=>({date:x.ds,start:pad(Math.floor(x.startMin/60))+':'+pad(x.startMin%60),end:pad(Math.floor(x.endMin/60))+':'+pad(x.endMin%60)}));
+}
+function renderSummary(){
+  const box=document.getElementById('summary');const rs=weekRanges();
+  if(!rs.length){box.innerHTML='<p class="empty">這週還沒選任何時段。</p>';return}
+  box.innerHTML='<ul>'+rs.map(x=>'<li><span>'+(x.d.getMonth()+1)+'/'+x.d.getDate()+'（'+DAYS[(x.d.getDay()+6)%7]+'）'+x.s+'–'+x.e+'</span><span style="color:var(--muted)">'+((toMin(x.e)-toMin(x.s))/60)+' 小時</span></li>').join('')+'</ul>';
+}
+document.getElementById('prev').onclick=()=>{weekStart=addDays(weekStart,-7);render()};
+document.getElementById('next').onclick=()=>{weekStart=addDays(weekStart,7);render()};
+document.getElementById('clearWeek').onclick=()=>{
+  for(let i=0;i<7;i++){const ds=ymd(addDays(weekStart,i));for(let r=0;r<ROWS;r++)sel.delete(ds+'|'+rowTime(r))}
+  render();
+};
+document.getElementById('copyPrev').onclick=()=>{
+  let n=0;
+  for(let i=0;i<7;i++){const d=addDays(weekStart,i),p=addDays(weekStart,i-7);
+    for(let r=0;r<ROWS;r++){if(sel.has(ymd(p)+'|'+rowTime(r))&&!lockedAt(ymd(d),r)&&!isPast(d,r)){sel.add(ymd(d)+'|'+rowTime(r));n++}}}
+  render();setMsg(n?'已套用上週的時段':'上週沒有可套用的時段');
+};
+document.getElementById('weekdayPm').onclick=()=>{
+  for(let i=0;i<5;i++){const d=addDays(weekStart,i);
+    for(let r=0;r<ROWS;r++){const m=START_H*60+r*STEP;if(m>=13*60&&m<18*60&&!lockedAt(ymd(d),r)&&!isPast(d,r))sel.add(ymd(d)+'|'+rowTime(r))}}
+  render();
+};
+function setMsg(t,cls){const m=document.getElementById('msg');m.textContent=t;m.className='msg'+(cls?' '+cls:'')}
+document.getElementById('save').onclick=()=>{
+  const btn=document.getElementById('save');const ranges=allRanges();
+  btn.disabled=true;setMsg('送出中…');
+  apiPost({action:'save',expertId:DATA.expertId,ranges})
+    .then(r=>{btn.disabled=false;setMsg('已送出 '+r.n+' 個時段，謝謝！','ok')})
+    .catch(err=>{btn.disabled=false;setMsg('送出失敗：'+err.message,'err')});
+};
+
+async function initReply(id,t){
+  const d=await apiGet({api:'slot',id,t});
+  if(d.state==='invalid')return showMsg('連結無效','這個連結已失效或不正確，請聯絡 VISION 講師部門。');
+  if(d.state==='done')return showMsg('已處理','這個時段已經回覆過或已釋放，謝謝。');
+  document.getElementById('rpHello').textContent=d.expert+' 您好，VISION 已為您保留以下時段：';
+  document.getElementById('rpTitle').textContent=d.title||'（未填）';
+  document.getElementById('rpCode').textContent=d.code||'—';
+  document.getElementById('rpWhen').textContent=d.when;
+  show('replyView');
+  const ok=document.getElementById('rpOk'),no=document.getElementById('rpNo'),m=document.getElementById('rpMsg');
+  const go=decision=>{
+    ok.disabled=no.disabled=true;m.className='msg';m.textContent='處理中…';
+    apiPost({action:'reply',id,t,decision})
+      .then(r=>{m.className='msg ok';m.textContent=r.msg})
+      .catch(e=>{ok.disabled=no.disabled=false;m.className='msg err';m.textContent='失敗：'+e.message});
+  };
+  ok.onclick=()=>go('confirm');no.onclick=()=>go('decline');
+}
+
+(async()=>{
+  const q=new URLSearchParams(location.search);
+  try{
+    if(q.get('reply'))await initReply(q.get('reply'),q.get('t')||'');
+    else if(q.get('e'))initGrid(await apiGet({api:'expert',e:q.get('e')}));
+    else showMsg('請使用專屬連結','請打開 VISION 傳給您的專屬連結。');
+  }catch(err){showMsg('暫時無法載入','請稍後再試，或聯絡 VISION 講師部門。（'+err.message+'）')}
+})();
+</script>
+</body>
+</html>
